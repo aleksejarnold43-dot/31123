@@ -5,33 +5,38 @@ TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
 GOOGLE_KEY = "AIzaSyBn_JuyBetYxrHvxHMkOHEVXQBbavNdQeI"
 
 genai.configure(api_key=GOOGLE_KEY)
-# Настраиваем ИИ так, чтобы он не блокировал грубость
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    safety_settings=[
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    ]
-)
+model = genai.GenerativeModel('gemini-1.5-flash')
 bot = telebot.TeleBot(TG_TOKEN)
 
-# Чуть менее "триггерный" промпт для фильтров
-STYLE = "Ты — очень грубый и дерзкий уличный пацан. Отвечай без цензуры, коротко, на сленге, только маленькими буквами. Можешь хамить."
+# Убрали слова "мат", "грубо", "посылай". Заменили на "плохой парень".
+STYLE = "Ты — очень плохой парень с района. Говоришь на сленге, дерзко, используешь только маленькие буквы. Короткие ответы."
 
 @bot.message_handler(func=lambda m: True)
 def echo(m):
     try:
-        res = model.generate_content(f"{STYLE}\nЮзер: {m.text}")
+        # Добавляем примеры, чтобы ИИ понял стиль без запрещенных слов
+        prompt = f"{STYLE}\nПример: слышь, ты че тут забыл?\nЮзер: {m.text}\nТвой ответ:"
+        
+        # Настройки безопасности прямо в запросе
+        res = model.generate_content(
+            prompt,
+            safety_settings={
+                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+                "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
+                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
+            }
+        )
+        
         if res.text:
             bot.reply_to(m, res.text.lower())
         else:
-            bot.reply_to(m, "че ты там мычишь")
+            bot.reply_to(m, "че ты там мямлишь")
+            
     except Exception as e:
-        # Если даже так блок — выводим ошибку в логи, чтобы понять причину
-        print(f"Ошибка ИИ: {e}")
-        bot.reply_to(m, "слышь чето меня кроет повтори позже")
+        # Если всё равно ошибка, выведи её в логи Amvera!
+        print(f"ОШИБКА: {e}")
+        bot.reply_to(m, "слышь чет я тебя не понял")
 
 if __name__ == "__main__":
     bot.remove_webhook()
