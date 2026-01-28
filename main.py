@@ -1,38 +1,35 @@
 import telebot
 import google.generativeai as genai
 
+# ТВОИ КЛЮЧИ
 TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
 GOOGLE_KEY = "AIzaSyBn_JuyBetYxrHvxHMkOHEVXQBbavNdQeI"
 
+# Настройка ИИ 1.5 Flash
 genai.configure(api_key=GOOGLE_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 bot = telebot.TeleBot(TG_TOKEN)
 
-# Убираем все "опасные" слова из инструкции
-STYLE = "Ты — простой пацан с района, общаешься на расслабленном сленге, только маленькими буквами. Ты дружелюбный, но дерзкий."
+# Инструкция без триггеров для фильтров
+STYLE = "Ты — позитивный бро. Общайся на сленге, коротко, используй только маленькие буквы. Будь на чилле."
 
 @bot.message_handler(func=lambda m: True)
 def echo(m):
     try:
-        # Пытаемся получить ответ с минимальными ограничениями
-        response = model.generate_content(
-            f"{STYLE}\nЮзер: {m.text}",
-            safety_settings={
-                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
-                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
-            }
-        )
+        # Просим ИИ ответить на сообщение
+        res = model.generate_content(f"{STYLE}\nЮзер: {m.text}")
         
-        if response.text:
-            bot.reply_to(m, response.text.lower())
+        if res.text:
+            bot.reply_to(m, res.text.lower())
         else:
-            bot.reply_to(m, "бро, чет я подвис, давай еще раз")
+            bot.reply_to(m, "бро, чет я задумался, черкани еще раз")
             
     except Exception as e:
-        # Если ИИ всё равно блочит, бот ответит просто эхом, чтобы мы знали, что он жив
-        bot.reply_to(m, f"я тебя слышу, ты сказал: {m.text}. но иишка чет тупит.")
+        # Если ИИ все равно блочит — бот просто ответит сам без мата
         print(f"Ошибка ИИ: {e}")
+        bot.reply_to(m, "слушай, чет связь барахлит, давай позже")
 
 if __name__ == "__main__":
     bot.remove_webhook()
+    print("БОТ В СЕТИ!")
     bot.infinity_polling()
