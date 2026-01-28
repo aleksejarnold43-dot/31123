@@ -2,7 +2,7 @@ import telebot
 import google.generativeai as genai
 
 TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
-GOOGLE_KEY = "AIzaSyBn_JuyBetYxrHvxHMkOHEVXQBbavNdQeI"
+GOOGLE_KEY = "AIzaSyAOGk2YU7z-c9maf5gHlcY8QLjuUPY0nuQ"
 
 genai.configure(api_key=GOOGLE_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
