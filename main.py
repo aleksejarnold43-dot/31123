@@ -1,35 +1,36 @@
 import telebot
 import google.generativeai as genai
 
-# ТВОИ КЛЮЧИ
+# ТВОИ КЛЮЧИ (НЕ ТРОГАЙ ИХ, ОНИ РАБОЧИЕ)
 TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
 GOOGLE_KEY = "AIzaSyBn_JuyBetYxrHvxHMkOHEVXQBbavNdQeI"
 
-# Настройка ИИ 1.5 Flash
+# Настройка ИИ
 genai.configure(api_key=GOOGLE_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 bot = telebot.TeleBot(TG_TOKEN)
 
-# Инструкция без триггеров для фильтров
-STYLE = "Ты — позитивный бро. Общайся на сленге, коротко, используй только маленькие буквы. Будь на чилле."
+# Стиль: "хулиган", но без слов, которые блочит Гугл
+STYLE = "Ты — пацан с района. Говоришь на сленге, дерзко, только маленькими буквами. Ты не любишь лишних вопросов."
 
 @bot.message_handler(func=lambda m: True)
 def echo(m):
     try:
-        # Просим ИИ ответить на сообщение
+        # Пытаемся получить ответ
         res = model.generate_content(f"{STYLE}\nЮзер: {m.text}")
         
         if res.text:
             bot.reply_to(m, res.text.lower())
         else:
-            bot.reply_to(m, "бро, чет я задумался, черкани еще раз")
+            bot.reply_to(m, "че ты там мямлишь, не понял нихуя")
             
     except Exception as e:
-        # Если ИИ все равно блочит — бот просто ответит сам без мата
+        # Если Гугл заблочил - бот ответит сам в своем стиле
         print(f"Ошибка ИИ: {e}")
-        bot.reply_to(m, "слушай, чет связь барахлит, давай позже")
+        bot.reply_to(m, "слышь, чет меня переклинило, давай по новой")
 
 if __name__ == "__main__":
-    bot.remove_webhook()
-    print("БОТ В СЕТИ!")
+    print("Удаляем старые вебхуки...")
+    bot.remove_webhook() # Это лечит ошибку 409
+    print("БОТ ЗАПУЩЕН!")
     bot.infinity_polling()
