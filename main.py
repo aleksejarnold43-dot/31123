@@ -1,43 +1,36 @@
 import telebot
 import google.generativeai as genai
 
+# ТВОИ КЛЮЧИ
 TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
 GOOGLE_KEY = "AIzaSyBn_JuyBetYxrHvxHMkOHEVXQBbavNdQeI"
 
+# Настройка ИИ
 genai.configure(api_key=GOOGLE_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 bot = telebot.TeleBot(TG_TOKEN)
 
-# Убрали слова "мат", "грубо", "посылай". Заменили на "плохой парень".
-STYLE = "Ты — очень плохой парень с района. Говоришь на сленге, дерзко, используешь только маленькие буквы. Короткие ответы."
+# Новый адекватный стиль
+STYLE = "Ты — крутой и позитивный бро. Отвечай на сленге, дружелюбно, используй только маленькие буквы. Помогай юзеру, но будь на стиле."
 
 @bot.message_handler(func=lambda m: True)
 def echo(m):
     try:
-        # Добавляем примеры, чтобы ИИ понял стиль без запрещенных слов
-        prompt = f"{STYLE}\nПример: слышь, ты че тут забыл?\nЮзер: {m.text}\nТвой ответ:"
-        
-        # Настройки безопасности прямо в запросе
-        res = model.generate_content(
-            prompt,
-            safety_settings={
-                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
-                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
-                "HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
-                "HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
-            }
-        )
+        # Прямой запрос без лишних настроек (для стабильности)
+        prompt = f"{STYLE}\nЮзер спросил: {m.text}\nТвой ответ:"
+        res = model.generate_content(prompt)
         
         if res.text:
             bot.reply_to(m, res.text.lower())
         else:
-            bot.reply_to(m, "че ты там мямлишь")
+            bot.reply_to(m, "бро, чет мысль потерял, повтори еще раз")
             
     except Exception as e:
-        # Если всё равно ошибка, выведи её в логи Amvera!
+        # Если будет ошибка — ты увидишь её в логах Amvera
         print(f"ОШИБКА: {e}")
-        bot.reply_to(m, "слышь чет я тебя не понял")
+        bot.reply_to(m, "слушай, чет гугл меня подводит, ща исправлюсь")
 
 if __name__ == "__main__":
     bot.remove_webhook()
+    print("БОТ ЗАПУЩЕН В РЕЖИМЕ ПОЗИТИВНОГО БРО!")
     bot.infinity_polling()
