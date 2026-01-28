@@ -1,43 +1,50 @@
 import telebot
-import google.generativeai as genai
+import requests
+import json
 
 # ТВОИ КЛЮЧИ
 TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
-GOOGLE_KEY = "AIzaSyAOGk2YU7z-c9maf5gHlcY8QLjuUPY0nuQ"
+OPENROUTER_KEY = "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"
 
-genai.configure(api_key=GOOGLE_KEY)
 bot = telebot.TeleBot(TG_TOKEN)
 
-# ФУНКЦИЯ АВТОПОДБОРА МОДЕЛИ
-def find_working_model():
-    try:
-        # Получаем список всех моделей, доступных твоему ключу
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                if 'gemini-1.5' in m.name or 'gemini-pro' in m.name:
-                    print(f"Найдена рабочая модель: {m.name}")
-                    return genai.GenerativeModel(m.name)
-    except Exception as e:
-        print(f"Ошибка при поиске моделей: {e}")
-    return None
-
-model = find_working_model()
-
-STYLE = "ты простой пацан с района, общайся на сленге, коротко, только маленькими буквами."
+# Инструкция для ИИ
+STYLE = "Ты — дерзкий пацан с района. Общайся на сленге, коротко, только маленькими буквами. Используй слова: слышь, че каво, ровно, базаришь."
 
 @bot.message_handler(func=lambda m: True)
 def echo(m):
     try:
-        if not model:
-            bot.reply_to(m, "слышь, ключи не пашут или моделей нет")
-            return
-            
-        res = model.generate_content(f"{STYLE}\nЮзер: {m.text}")
-        bot.reply_to(m, res.text.lower())
+        # Запрос к OpenRouter
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Content-Type": "application/json",
+            },
+            data=json.dumps({
+                "model": "meta-llama/llama-3-8b-instruct:free",
+                "messages": [
+                    {"role": "system", "content": STYLE},
+                    {"role": "user", "content": m.text}
+                ]
+            })
+        )
+        
+        data = response.json()
+        
+        # Проверяем, есть ли ответ в данных
+        if 'choices' in data:
+            reply = data['choices'][0]['message']['content']
+            bot.reply_to(m, reply.lower())
+        else:
+            print(f"Ошибка API: {data}")
+            bot.reply_to(m, "слышь, чет я приуныл, повтори еще раз")
+
     except Exception as e:
-        bot.reply_to(m, f"косяк: {str(e)[:50]}")
+        print(f"Критическая ошибка: {e}")
+        bot.reply_to(m, "косяк какой-то, тормози")
 
 if __name__ == "__main__":
     bot.remove_webhook()
-    print("БОТ ЗАПУЩЕН!")
+    print("БОТ НА OPENROUTER ЗАПУЩЕН!")
     bot.infinity_polling()
