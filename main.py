@@ -1,39 +1,61 @@
+
 import telebot
-import requests
-from urllib.parse import quote
+import google.generativeai as genai
 
-# ТВОЙ ТОКЕН ТЕЛЕГИ (ЕДИНСТВЕННОЕ, ЧТО НУЖНО)
+# ТВОИ КЛЮЧИ
 TG_TOKEN = "7950976776:AAFXfDfpf3F1r0aDuhe2iuL0rfwyB5fTFh4"
+GOOGLE_KEY = "AIzaSyBaNWSUkW-SyrmBkmFkPCHqGCZYi7NwNvI"
 
+# Настройка Гугла
+genai.configure(api_key=GOOGLE_KEY)
 bot = telebot.TeleBot(TG_TOKEN)
 
-# Стиль пацана
-STYLE = "ты дерзкий пацан с района. отвечай на сленге, коротко, грубовато, только маленькими буквами. не используй умные слова."
+# Пытаемся взять самую быструю модель (Flash)
+# Если она недоступна в регионе, переключимся на Pro
+def get_model():
+    for name in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']:
+        try:
+            m = genai.GenerativeModel(name)
+            return m
+        except:
+            continue
+    return None
+
+model = get_model()
+
+# Стиль
+STYLE = "ты дерзкий пацан, отвечай пулей, коротко и на сленге, только маленькими буквами."
 
 @bot.message_handler(func=lambda m: True)
 def echo(m):
     try:
-        # 1. Готовим текст запроса
-        prompt = f"{STYLE}\nЮзер пишет: {m.text}\nТвой ответ:"
+        if not model:
+            bot.reply_to(m, "слышь, гугл не дает модель, походу регион не тот")
+            return
+
+        # Настройки безопасности (чтобы не блокировал сленг)
+        response = model.generate_content(
+            f"{STYLE}\nЮзер: {m.text}",
+            safety_settings={
+                "HARM_CATEGORY_HARASSMENT": "BLOCK_NONE",
+                "HARM_CATEGORY_HATE_SPEECH": "BLOCK_NONE",
+            }
+        )
         
-        # 2. Кодируем текст для ссылки (чтобы пробелы стали %20 и т.д.)
-        url_prompt = quote(prompt)
-        
-        # 3. ОТПРАВЛЯЕМ ЗАПРОС НА БЕСПЛАТНЫЙ СЕРВЕР (БЕЗ КЛЮЧЕЙ!)
-        # Используем модель OpenAI через открытый шлюз
-        response = requests.get(f"https://text.pollinations.ai/{url_prompt}?model=openai")
-        
-        # 4. Проверяем ответ
-        if response.status_code == 200:
+        if response.text:
             bot.reply_to(m, response.text.lower())
         else:
-            bot.reply_to(m, "слышь, сервак перегружен, пробуй позже")
+            bot.reply_to(m, "че ты там промямлил?")
             
     except Exception as e:
-        bot.reply_to(m, f"какая-то дичь: {e}")
+        # Если закончились лимиты (ошибка 429)
+        if "429" in str(e):
+            bot.reply_to(m, "брат, тормози, дай отдышаться (лимиты)")
+        else:
+            print(f"Ошибка: {e}")
+            bot.reply_to(m, "косяк какой-то, пробуй еще")
 
 if __name__ == "__main__":
-    # Убираем старые ошибки
     bot.remove_webhook()
-    print("БОТ ЗАПУЩЕН БЕЗ КЛЮЧЕЙ!")
+    print("СКОРОСТНОЙ БОТ ЗАПУЩЕН!")
     bot.infinity_polling()
